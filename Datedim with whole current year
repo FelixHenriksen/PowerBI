@@ -1,0 +1,26 @@
+
+/* Bedre dato dimension med slutdato automatisk sat til 31/12 i aktuelt år. Skal stadig sætte parameter StartYear */
+
+let
+StartDate = #date(StartYear, 1, 1),
+EndDate = #date(Date.Year(DateTime.LocalNow()), 12, 31),
+NumberOfDays = Duration.Days(EndDate - StartDate),
+Dates = List.Dates(StartDate, NumberOfDays+1, #duration(1,0,0,0)),
+#"Konverteret til tabel" = Table.FromList(Dates, Splitter.SplitByNothing(), null, null, ExtraValues.Error),
+#"Omdøbte kolonner" = Table.RenameColumns(#"Konverteret til tabel",{{"Column1", "FullDateAlternateKey"}}),
+
+#"Ændret type" = Table.TransformColumnTypes(#"Omdøbte kolonner",{{"FullDateAlternateKey", type date}}),
+    	#"Indsat år" = Table.AddColumn(#"Ændret type", "År", each Date.Year([FullDateAlternateKey]), Int64.Type),
+    	#"Indsat kvartal" = Table.AddColumn(#"Indsat år", "Kvartal", each Date.QuarterOfYear([FullDateAlternateKey]), Int64.Type),
+    	#"Indsat måned" = Table.AddColumn(#"Indsat kvartal", "Måned", each Date.Month([FullDateAlternateKey]), Int64.Type),
+    	#"Indsatte navn på måned" = Table.AddColumn(#"Indsat måned", "Navn på måned", each Date.MonthName([FullDateAlternateKey]), type text),
+    	#"Indsat uge i året" = Table.AddColumn(#"Indsatte navn på måned", "Uge i år", each Date.WeekOfYear([FullDateAlternateKey]), Int64.Type),
+    	#"Indsat uge i måned" = Table.AddColumn(#"Indsat uge i året", "Uge i måned", each Date.WeekOfMonth([FullDateAlternateKey]), Int64.Type),
+    	#"Indsat dag" = Table.AddColumn(#"Indsat uge i måned", "Dag", each Date.Day([FullDateAlternateKey]), Int64.Type),
+    	#"Indsat dag i ugen" = Table.AddColumn(#"Indsat dag", "Dag i uge", each Date.DayOfWeek([FullDateAlternateKey], Day.Monday), Int64.Type),
+    	#"Indsat dag i året" = Table.AddColumn(#"Indsat dag i ugen", "Dag i år", each Date.DayOfYear([FullDateAlternateKey]), Int64.Type),
+    	#"Indsat navn på dag" = Table.AddColumn(#"Indsat dag i året", "Navn på dag", each Date.DayOfWeekName([FullDateAlternateKey]), type text),
+    	#"Indsat indeværende år" = Table.AddColumn(#"Indsat navn på dag", "Indeværende år", each if [År] = Date.Year(DateTime.LocalNow()) then "I år" else "Tidligere år", type text)
+in
+    #"Indsat indeværende år"
+
